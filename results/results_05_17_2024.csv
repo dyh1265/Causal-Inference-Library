@@ -1,0 +1,4 @@
+time,model_name,dataset,defaults,mean_train,std_train,mean_test,std_test,ate_mean_train,std_mean_train,ate_mean_test,std_mean_test,tuner,comments,emissions_train,emissions_test,total_emissions_test,total_emission_train,params
+12:31:10,GNNTARnet,ihdp_b,True,1.8543115128505587,0.04611317647146214,1.9813460507376075,0.056256542123269866,0.19742455617781984,0.02925559295857552,0.23834792368919192,0.03751130200753006,random,graph infly true,1.0919598275547345e-05 +- 4.997790078015335e-07,0.0008086138959489827 +- 4.176456440878997e-05,0.0010919598275547346,0.08086138959489826," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 4 n_hidden_1 = 6
+             hidden_y0 = 208  hidden_y1 = 240"
