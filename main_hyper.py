@@ -7,7 +7,6 @@ from models.TEDVAE_hyper import *
 from models.GANITE_hyper import *
 import scipy.stats
 import argparse
-from utils.gnn_data import *
 from codecarbon import EmissionsTracker
 from hyperparameters import *
 
@@ -20,7 +19,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-from utils.gnn_data import *
 from utils.defenitions import ROOT_DIR
 import os
 
