@@ -12,12 +12,9 @@ from utils.layers import FullyConnected, VariationalFullyConnected, Convolutiona
 from models.CausalModel import *
 import keras_tuner as kt
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TerminateOnNaN, EarlyStopping
-from causallearn.search.ScoreBased.GES import ges
-from causallearn.utils.GraphUtils import GraphUtils
 import os, sys
 import tensorflow_probability as tfp
 tf.get_logger().setLevel(logging.ERROR)
-from causalnex.structure.notears import from_numpy
 import tensorflow.keras.backend as K
 from tensorflow.keras.metrics import binary_accuracy
 
