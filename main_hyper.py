@@ -52,7 +52,7 @@ def main(args):
 
     datasets = {'ihdp_a', 'ihdp_b', 'jobs', 'sum'}
     ipm_list = {'wasserstein', 'None'}
-    cdm_list = {'lingam', 'pc', 'ges', 'lingam_salesforce'}
+    cdm_list = {'lingam'}
 
     if args.model_name in model_names and args.dataset_name in datasets and args.ipm_type in ipm_list \
             and args.tuner_name in tuners:
@@ -147,33 +147,17 @@ if __name__ == "__main__":
     parser.add_argument("--model-name", default='GNNTARnet', type=str)
     parser.add_argument("--ipm-type", default='None', type=str)
     parser.add_argument("--defaults", default="True", type=str)
-    parser.add_argument("--dataset-name", default='binary_sum', type=str)
+    parser.add_argument("--dataset-name", default='ihdp_a', type=str)
     parser.add_argument("--tuner-name", default='random', type=str)
     parser.add_argument("--drop", default=None, type=int)
     parser.add_argument("--num", default=100, type=int)
     parser.add_argument("--eye", default="False", type=str)
     parser.add_argument("--num_layers", default=5, type=int)
-    parser.add_argument("--cdm", default='pc', type=str)
+    parser.add_argument("--cdm", default='lingam', type=str)
     parser.add_argument("--comments", default='graph infly true', type=str)
     args = parser.parse_args()
 
     folder_path = "results"
     folder_exists = exists(folder_path)
-    #
-    # if args.dataset_name != "binary_sum":
-    #     generate_graphs(dataset_name=args.dataset_name, cdm=args.cdm)
-    # #
-    # check if folder exists
-    # if not folder_exists:
-    #     os.makedirs(folder_path)
-    # #
-    # if args.model_name == "GNNTARnet" and args.dataset_name == "binary_sum":
-    #     run_gnn_on_sum(eye=args.eye, num=args.num,
-    #                num_layers=args.num_layers, dataset_name_new = args.dataset_name)
-    # #
-    # if args.model_name == "TARnet" and args.dataset_name == "sum":
-    #     run_tarnet_on_sum(num=args.num, num_layers=args.num_layers)
 
-    # main(args)
-    jobs = np.load("jobs_DW_bin.new.10.train.npz")
-    breakpoint()
+    main(args)
