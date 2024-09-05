@@ -14,15 +14,10 @@ from models.TLearner_hyper import *
 from models.TEDVAE_hyper import *
 from models.GANITE_hyper import *
 import scipy.stats
-import shutil
 from models.CausalModel import *
-from sklearn.preprocessing import MinMaxScaler
-from datetime import datetime
 import json
 import lingam
-from lingam.utils import make_prior_knowledge, make_dot
-from causalnex.structure.notears import from_numpy
-
+from lingam.utils import make_prior_knowledge
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -38,42 +33,6 @@ def mean_confidence_interval(data, confidence=0.95):
     h = se * scipy.stats.t.ppf((1 + confidence) / 2., n - 1)
     return m, h
 
-
-def find_edges(i, datset_name):
-    params = {'dataset_name': datset_name, 'num': 100, 'binary': False, 'num_train': None}
-    model = CausalModel(params)
-    kwargs = {'count': i}
-    data_train, data_test = model.load_data(**kwargs)
-    # data_train = pd.read_csv("JOBS" + '/jobs_train_' + str(i) + '.csv', delimiter=',')
-
-    y = data_train['y']
-    x = data_train['x']
-
-    data = np.concatenate([x, y], axis=1)
-
-    # https://causalnex.readthedocs.io/en/latest/03_tutorial/01_first_tutorial.html
-
-    num_y = data.shape[1] - 1
-    sm = from_numpy(data, tabu_parent_nodes=[num_y])
-    if datset_name == "jobs":
-        sm.remove_edges_below_threshold(0.05)
-    elif datset_name == "ihdp_b":
-        sm.remove_edges_below_threshold(0.99)
-    else:
-        sm.remove_edges_below_threshold(0.5)
-    influence_y = np.asarray(list(sm.in_edges(num_y)))[:, 0]
-    # remove edges from nodes to y
-    sm.remove_edges_from(list(sm.in_edges(num_y)))
-    # get the final edges
-    edges = np.asarray(list(sm.edges))
-
-    return edges, influence_y
-
-import numpy as np
-import pandas as pd
-import graphviz
-import lingam
-from lingam.utils import make_prior_knowledge, make_dot
 
 def find_edges_lingam(i, datset_name):
     params = {'dataset_name': datset_name, 'num': 100, 'binary': False, 'num_train': None}
@@ -683,97 +642,3 @@ def get_data_from_graph(graph, layer_nodes, index):
             dataset[str(node)] = sum(parent_values)
     dataset = pd.DataFrame(dataset, index=[index])
     return dataset
-
-def create_insurance_data():
-    path = "INSURANCE_base"
-    for num in range(100):
-        data = np.loadtxt(path + '/insurance_' + str(num) + '.csv', delimiter=',', skiprows=1)
-        # load graph data
-        graph = np.loadtxt('graphs/insurance_original_graph/graph_' + str(num) + '.csv', delimiter=',', skiprows=1)
-
-        num_nodes = data.shape[1]
-        beta = np.random.choice(5, num_nodes, p=[0.5, 0.2, 0.15, 0.1, 0.05])
-        # non zero dependence
-        nonzero_dep_idx = beta > 0
-        indices = np.arange(0, num_nodes)
-
-        # select nodes influencing y
-        influence_y = indices[nonzero_dep_idx]
-
-        # select nodes defining treatment
-        beta_t = np.random.choice(5, num_nodes, p=[0.5, 0.2, 0.15, 0.1, 0.05])
-        mean_t = np.dot(data, beta_t)
-        mu_0_t = np.expand_dims(np.random.normal(mean_t, 1), axis=-1)
-        mean_t = np.mean(mu_0_t)
-
-        # find nodes influencing treatment
-        nonzero_dep_t = beta_t > 0
-        influence_t = indices[nonzero_dep_t]
-        # create treatment
-        t = np.zeros((data.shape[0], 1))
-        t_1 = mu_0_t >= mean_t
-        t[t_1] = 1
-
-        mean = np.dot(data, beta)
-
-        mu_0 = np.expand_dims(np.random.normal(mean, 1), axis=-1)
-        mu_1 = np.expand_dims(np.random.normal(mean + 4, 1), axis=-1)
-
-        y = np.zeros((data.shape[0], 1))
-        t_0 = t == 0
-        t_1 = t == 1
-        y[t_0] = mu_0[t_0]
-        y[t_1] = mu_1[t_1]
-
-        data = np.concatenate([t, y, mu_0, mu_1, data], axis=1)
-        data_train, data_test = train_test_split(data, test_size=0.2)
-
-        t_train = pd.DataFrame(data_train[:, 0], columns=["t"])
-        y_train = pd.DataFrame(data_train[:, 1], columns=["y"])
-        mu_0_train = pd.DataFrame(data_train[:, 2], columns=["mu_0"])
-        mu_1_train = pd.DataFrame(data_train[:, 3], columns=["mu_1"])
-        x_train = pd.DataFrame(data_train[:, 4:])
-
-        data_train = pd.DataFrame(pd.concat([t_train, y_train, mu_0_train, mu_1_train, x_train], axis=1))
-
-        t_test = pd.DataFrame(data_test[:, 0], columns=["t"])
-        y_test = pd.DataFrame(data_test[:, 1], columns=["y"])
-        mu_0_test = pd.DataFrame(data_test[:, 2], columns=["mu_0"])
-        mu_1_test = pd.DataFrame(data_test[:, 3], columns=["mu_1"])
-        x_test = pd.DataFrame(data_test[:, 4:])
-
-        data_test = pd.DataFrame(pd.concat([t_test, y_test, mu_0_test, mu_1_test, x_test], axis=1))
-
-        new_path = "INSURANCE"
-        file_exists_gnn = exists(new_path)
-
-        # check if folder exists
-        if not file_exists_gnn:
-            os.makedirs(new_path)
-
-        path_train = new_path + "/insurance_train_" + str(num) + '.csv'
-        path_test = new_path + "/insurance_test_" + str(num) + '.csv'
-
-        data_train.to_csv(path_train, index=False)
-        data_test.to_csv(path_test, index=False)
-
-        graph = graph.astype(int)
-        graph_path = "/graph_" + str(num) + '.json'
-
-        graph_struct = {}
-        graph_struct['from'] = graph[:, 0].tolist()
-        graph_struct['to'] = graph[:, 1].tolist()
-        graph_struct['influence_y'] = influence_y.tolist()
-        graph_struct['influence_t'] = influence_t.tolist()
-
-        folder_path = "graphs/insurance"
-        folder_exists = exists(folder_path)
-        # check if folder exists
-        if not folder_exists:
-            os.makedirs(folder_path)
-
-        # data = {key: value.tolist() if isinstance(value, np.ndarray) else value for key, value in data.items()}
-
-        with open(folder_path + graph_path, "w") as file:
-            json.dump(graph_struct, file)
-        # graph.to_csv(folder_path+graph_path, index=False, header=False)
