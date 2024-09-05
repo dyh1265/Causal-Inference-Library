@@ -9,7 +9,6 @@ import warnings, logging
 import scipy.stats
 from datetime import datetime
 import keras_tuner as kt
-from codecarbon import EmissionsTracker
 from matplotlib import pyplot as plt
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -30,8 +29,6 @@ class CausalModel:
         self.params = params
         self.binary = params['binary']
         self.sparams = ""
-        self.emission_test = list()
-        self.emission_train = list()
         self.folder_ind = None
         self.sum_size = None
 
@@ -814,39 +811,4 @@ class CausalModel:
                 seed=0)
         return tuner
 
-    def get_trackers(self, count):
-        folder_path = './Emissions/' + self.params['model_name'] + '/'
-        if self.params['defaults']:
-            folder_path += 'default/'
-        else:
-            folder_path += self.params['tuner_name'] + '/'
-
-        file_path_train = self.params['model_name'] + '_' + self.params['dataset_name'] + '_train.csv'
-        file_path_test = self.params['model_name'] + '_' + self.params['dataset_name'] + '_test.csv'
-
-        if self.params['dataset_name'] == 'gnn':
-            file_path_train = self.params['model_name'] + '_' + self.params['dataset_name'] + '_train_' + str(self.folder_ind) + '.csv'
-            file_path_test = self.params['model_name'] + '_' + self.params['dataset_name'] + '_test_' + str(self.folder_ind) + '.csv'
-
-        file_exists_train = exists(folder_path + file_path_train)
-        file_exists_test = exists(folder_path + file_path_test)
-        folder_exists = exists(folder_path)
-
-        if file_exists_train:
-            # delete file
-            if count == 0:
-                os.remove(folder_path + file_path_train)
-
-        if file_exists_test:
-            # delete file
-            if count == 0:
-                os.remove(folder_path + file_path_test)
-        # check if folder exists
-        if not folder_exists:
-            os.makedirs(folder_path)
-        tracker_train = EmissionsTracker(project_name=self.params['model_name'], output_dir=folder_path,
-                                         output_file=file_path_train, log_level="critical")
-        tracker_test = EmissionsTracker(project_name=self.params['model_name'], output_dir=folder_path,
-                                        output_file=file_path_test, log_level="critical")
-
-        return tracker_test, tracker_train
+    

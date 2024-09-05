@@ -7,7 +7,6 @@ from models.TEDVAE_hyper import *
 from models.GANITE_hyper import *
 import scipy.stats
 import argparse
-from codecarbon import EmissionsTracker
 from hyperparameters import *
 
 import tensorflow as tf
@@ -80,18 +79,6 @@ def main(args):
         am_test, ah_test = mean_confidence_interval(average_test, confidence=0.95)
         am_train, ah_train = mean_confidence_interval(average_train, confidence=0.95)
 
-        em_am_test, em_ah_test = mean_confidence_interval(model.emission_test, confidence=0.95)
-        em_am_train, em_ah_train = mean_confidence_interval(model.emission_train, confidence=0.95)
-
-        total_em_test = np.sum(model.emission_test)
-        total_em_train = np.sum(model.emission_train)
-
-        print(f'EMISSIONS:' f'total test {total_em_test} | total train: {total_em_train} ||'
-              f' mean test {em_am_test} | std test: {em_ah_test} || mean train: {em_am_train} | std train: {em_ah_train} ')
-
-        em_test = str(em_am_test) + ' +- ' + str(em_ah_test)
-        em_train = str(em_am_train) + ' +- ' + str(em_ah_train)
-
         print(
             f'mean test {m_test} | std test: {h_test} || mean train: {m_train} | std train: {h_train} '
             f'|| ate mean test: {am_test} | std mean test {ah_test} || ate mean train: {am_train} | std mean train {ah_train}')
@@ -109,8 +96,7 @@ def main(args):
 
         columns = ["time", "model_name", "dataset", "cdm", "defaults", "mean_train", "std_train", "mean_test", "std_test",
                    "ate_mean_train", "std_mean_train", "ate_mean_test",
-                   "std_mean_test", "tuner", "comments", "emissions_train", "emissions_test", "total_emissions_test",
-                   "total_emission_train", "params"]
+                   "std_mean_test", "tuner", "comments",  "params"]
         if file_exists:
             results = pd.read_csv(file_name)
         else:
@@ -125,8 +111,7 @@ def main(args):
         # save results
         result = pd.DataFrame([[date_time, model_name, args.dataset_name, args.cdm, str(args.defaults), m_train, h_train, m_test,
                                 h_test, am_train, ah_train, am_test,
-                                ah_test, args.tuner_name, args.comments, em_test, em_train, total_em_test,
-                                total_em_train,
+                                ah_test, args.tuner_name, args.comments,
                                 model.sparams, ]],
                               columns=columns)
         if results.empty:
@@ -142,13 +127,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Causal Model')
-    parser.add_argument("--model-name", default='GNNTARnet', type=str)
-    parser.add_argument("--ipm-type", default='None', type=str)
+    parser.add_argument("--model-name", default='TEDVAE', type=str)
+    parser.add_argument("--ipm-type", default='wasserstein', type=str)
     parser.add_argument("--defaults", default="True", type=str)
     parser.add_argument("--dataset-name", default='ihdp_a', type=str)
     parser.add_argument("--tuner-name", default='random', type=str)
     parser.add_argument("--drop", default=None, type=int)
-    parser.add_argument("--num", default=100, type=int)
+    parser.add_argument("--num", default=1, type=int)
     parser.add_argument("--eye", default="False", type=str)
     parser.add_argument("--num_layers", default=5, type=int)
     parser.add_argument("--cdm", default='lingam', type=str)

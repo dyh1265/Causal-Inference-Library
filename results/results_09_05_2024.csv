@@ -1,0 +1,27 @@
+time,model_name,dataset,cdm,defaults,mean_train,std_train,mean_test,std_test,ate_mean_train,std_mean_train,ate_mean_test,std_mean_test,tuner,comments,params
+17:45:10,CFRNet_wasserstein,ihdp_a,lingam,True,0.3831234117645602,,0.3852012345933102,,0.1153132701023698,,0.1512760036556821,,random,graph infly true,"n_fc=3 hidden_phi = 200
+                     hidden_y1 = 100 n_fc_y1 = 3
+                     hidden_y0 = 100  n_fc_y0 = 3"
+17:45:51,TARnet,ihdp_a,lingam,True,0.3478231100117471,,0.3245008288004242,,0.0917025695635089,,0.0978642211774101,,random,graph infly true,"n_fc=3 hidden_phi = 200
+              hidden_y1 = 100 n_fc_y1 = 3
+              hidden_y0 = 100  n_fc_y0 = 3"
+17:46:20,CFRNet_wasserstein,ihdp_a,lingam,True,0.3831234117645602,,0.3852012345933102,,0.1153132701023698,,0.1512760036556821,,random,graph infly true,"n_fc=3 hidden_phi = 200
+                     hidden_y1 = 100 n_fc_y1 = 3
+                     hidden_y0 = 100  n_fc_y0 = 3"
+17:55:40,CFRNet_wasserstein,ihdp_a,lingam,True,0.3831234117645602,,0.3852012345933102,,0.1153132701023698,,0.1512760036556821,,random,graph infly true,"n_fc=3 hidden_phi = 200
+                     hidden_y1 = 100 n_fc_y1 = 3
+                     hidden_y0 = 100  n_fc_y0 = 3"
+17:56:09,TARnet,ihdp_a,lingam,True,0.3478231100117471,,0.3245008288004242,,0.0917025695635089,,0.0978642211774101,,random,graph infly true,"n_fc=3 hidden_phi = 200
+              hidden_y1 = 100 n_fc_y1 = 3
+              hidden_y0 = 100  n_fc_y0 = 3"
+17:57:16,GNNTARnet,ihdp_a,lingam,True,0.314874849147985,,0.3470595151378829,,0.0948973558936754,,0.153135252044529,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
+17:57:45,TLearner,ihdp_a,lingam,True,0.5060940519991285,,0.5250970189691724,,0.1565550821203571,,0.18089280960793,,random,graph infly true,"np_fc_1=3 - hidden_phi_1 = 300 -
+                  learning rate=0.01 - batch size = 64 n_fc_0=3 - hidden_phi_0 = 300 -
+                  learning rate=0.01 - batch size = 64"
+17:58:14,GANITE,ihdp_a,lingam,True,0.6768764755593789,,0.6416130648129837,,0.3987474873042465,,0.4429380619640581,,random,graph infly true,"n_fc=5 - hidden_phi = 8 -
+                      learning rate=0.001 - batch size = 64"
+17:58:48,SLearner,ihdp_a,lingam,True,0.953507794105134,,0.8420914723960179,,0.0947510714163937,,0.1673893886077833,,random,graph infly true,n_fc=3 - hidden_phi = 300
+17:59:14,TEDVAE,ihdp_a,lingam,True,0.39916115159389665,,0.3654823270869463,,0.08902492418453223,,0.13584234570935427,,random,graph infly true," n_fc_enc_x = 4 hidden_phi_enc_x = 500
+                                  n_fc_dec_x = 4  hidden_phi_dec_x = 500"

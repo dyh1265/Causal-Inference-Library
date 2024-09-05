@@ -452,19 +452,14 @@ class GNNTARnetHyper(CausalModel):
     def train_and_evaluate(self, metric_list_train, metric_list_test, average_metric_list_train,
                            average_metric_list_test, **kwargs):
         setSeed(seed=42)
-        tracker_test, tracker_train = self.get_trackers(count=kwargs.get('count'))
         x_train, x_test, args_train, data_train, data_test = self.prepare_data(**kwargs)
-
-        with tracker_train:
-            self.fit_tuner(seed=0, **args_train)
-            model = self.fit_model(**args_train, count=kwargs.get('count'))
-        self.emission_train.append(tracker_train.final_emissions)
+        self.fit_tuner(seed=0, **args_train)
+        model = self.fit_model(**args_train, count=kwargs.get('count'))
 
         # make a prediction
-        with tracker_test:
-            concat_pred_test = self.evaluate(x_test, model)
-            concat_pred_train = self.evaluate(x_train, model)
-        self.emission_test.append(tracker_test.final_emissions)
+        concat_pred_test = self.evaluate(x_test, model)
+        concat_pred_train = self.evaluate(x_train, model)
+
 
         y0_pred_test, y1_pred_test = concat_pred_test[:, 0], concat_pred_test[:, 1]
         y0_pred_test = tf.expand_dims(y0_pred_test, axis=1)

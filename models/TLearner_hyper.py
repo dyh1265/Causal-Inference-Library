@@ -195,24 +195,19 @@ class TLearner(CausalModel):
 
         count = kwargs.get('count')
         self.folder_ind = kwargs.get('folder_ind') - 1
-        tracker_test, tracker_train = self.get_trackers(count)
         if self.params['binary']:
             # fit tuner on the first dataset
-            with tracker_train:
-                self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
-                model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
-            self.emission_train.append(tracker_train.final_emissions)
+            self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
+            model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
         else:
             # fit tuner on the first dataset
-            with tracker_train:
-                self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
-                model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
-            self.emission_train.append(tracker_train.final_emissions)
+            self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
+            model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
+       
         # make a prediction
-        with tracker_test:
-            concat_pred_test = self.evaluate(data_test['x'], model)
-            concat_pred_train = self.evaluate(data_train['x'], model)
-        self.emission_test.append(tracker_test.final_emissions)
+        concat_pred_test = self.evaluate(data_test['x'], model)
+        concat_pred_train = self.evaluate(data_train['x'], model)
+
 
         y0_pred_test, y1_pred_test = concat_pred_test[:, 0], concat_pred_test[:, 1]
         y0_pred_test = tf.expand_dims(y0_pred_test, axis=1)

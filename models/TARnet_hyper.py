@@ -149,26 +149,18 @@ class TARnetHyper(CausalModel):
         count = kwargs.get('count')
         self.folder_ind = kwargs.get('folder_ind') - 1
 
-        tracker_test, tracker_train = self.get_trackers(count)
-
         if self.params['binary']:
-            with tracker_train:
-                # fit tuner on the first dataset
-                self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
-                model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
-            self.emission_train.append(tracker_train.final_emissions)
+            # fit tuner on the first dataset
+            self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
+            model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
         else:
-            with tracker_train:
-                # fit tuner on the first dataset
-                self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
-                model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
-            self.emission_train.append(tracker_train.final_emissions)
+            # fit tuner on the first dataset
+            self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
+            model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
 
         # make a prediction
-        with tracker_test:
-            concat_pred_test = self.evaluate(data_test['x'], model)
-            concat_pred_train = self.evaluate(data_train['x'], model)
-        self.emission_test.append(tracker_test.final_emissions)
+        concat_pred_test = self.evaluate(data_test['x'], model)
+        concat_pred_train = self.evaluate(data_train['x'], model)
 
         y0_pred_test, y1_pred_test = concat_pred_test[:, 0], concat_pred_test[:, 1]
         y0_pred_test = tf.expand_dims(y0_pred_test, axis=1)
@@ -178,9 +170,6 @@ class TARnetHyper(CausalModel):
         y0_pred_train = tf.expand_dims(y0_pred_train, axis=1)
         y1_pred_train = tf.expand_dims(y1_pred_train, axis=1)
 
-        # gain_curve_test = self.cumulative_gain(data_test_pred, "cate", y="y", t="t")
-        # gain_curve_train = self.cumulative_gain(data_train_pred, "cate", y="y", t="t")
-        # self.plot_cumulative_gain(gain_curve_test, gain_curve_train, data_test_pred)
 
         if self.params['dataset_name'] == 'jobs':
             _, policy_risk_test, _, test_ATT = self.find_policy_risk(y0_pred_test, y1_pred_test, data_test)
