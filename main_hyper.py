@@ -125,7 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-name", default='GNNTARnet', type=str)
     parser.add_argument("--ipm-type", default='wasserstein', type=str)
     parser.add_argument("--defaults", default="True", type=str)
-    parser.add_argument("--dataset-name", default='ihdp_b', type=str)
+    parser.add_argument("--dataset-name", default='ihdp_a', type=str)
     parser.add_argument("--tuner-name", default='random', type=str)
     parser.add_argument("--drop", default=None, type=int)
     parser.add_argument("--num", default=1, type=int)

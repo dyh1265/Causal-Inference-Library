@@ -426,9 +426,8 @@ class GNNTARnetHyper(CausalModel):
 
         graph_info = self.load_graphs(x_train=x_train, count=kwargs.get('count'))
 
-        influence_y = graph_info['influence_y']
         self.params['num_edges'] = len(graph_info['edges'][1])
-        self.params['influence_y'] = np.append(influence_y, np.expand_dims(x_train.shape[1], axis=0))
+        self.params['influence_y'] =  graph_info['influence_y']
 
         edges = graph_info['edges']
         weights = graph_info['edge_weights']

@@ -37,6 +37,9 @@ time,model_name,dataset,cdm,defaults,mean_train,std_train,mean_test,std_test,ate
 20:14:48,GNNTARnet,ihdp_a,,True,0.3988319164010391,,0.525153026426789,,0.1632881124841829,,0.2391774715113253,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
              n_hidden_0 = 7 n_hidden_1 = 6
              hidden_y0 = 96  hidden_y1 = 240"
-20:25:09,GNNTARnet,ihdp_b,,True,1.9574625090151059,,2.425732829009384,,0.30129508404183714,,0.1231311225045908,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+20:25:09,GNNTARnet,ihdp_b,,True,1.9574625090151057,,2.425732829009384,,0.3012950840418371,,0.1231311225045908,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
              n_hidden_0 = 4 n_hidden_1 = 6
              hidden_y0 = 208  hidden_y1 = 240"
+20:55:51,GNNTARnet,ihdp_a,,True,0.314874875922207,,0.34705968800113407,,0.09489746577798464,,0.15313546740563755,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
