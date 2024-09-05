@@ -15,10 +15,7 @@ import keras_tuner as kt
 # sudo chmod -R a+r /sys/class/powercap/intel-rapl
 
 import warnings
-
 warnings.filterwarnings('ignore')
-
-from utils.defenitions import ROOT_DIR
 import os
 
 os.environ['TF_DISABLE_SEGMENT_REDUCTION_OP_DETERMINISM_EXCEPTIONS'] = '1'
