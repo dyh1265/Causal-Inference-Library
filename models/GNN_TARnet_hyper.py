@@ -61,7 +61,7 @@ class HyperGNNTarnet(kt.HyperModel, CausalModel):
 
         model.compile(optimizer=SGD(learning_rate=self.params['lr'], nesterov=True, momentum=momentum),
                       loss=self.regression_loss,
-                      metrics=self.regression_loss, run_eagerly=False
+                      metrics=[self.regression_loss], run_eagerly=False
                       )
         return model
 

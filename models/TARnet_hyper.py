@@ -19,7 +19,7 @@ class HyperTarnet(kt.HyperModel, CausalModel):
         optimizer = SGD(learning_rate=self.params['lr'], momentum=0.9)
         model.compile(optimizer=optimizer,
                       loss=self.regression_loss,
-                      metrics=self.regression_loss)
+                      metrics=[self.regression_loss])
         return model
 
     def fit(self, hp, model, *args, **kwargs):
