@@ -3,20 +3,15 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras import Model
 from keras import regularizers
-from tensorflow.keras.optimizers import SGD, Adam
+from tensorflow.keras.optimizers import SGD
 from tensorflow.keras import layers
-from tensorflow.keras.layers import Layer
-
-from utils.layers import FullyConnected, VariationalFullyConnected, Convolutional1D, LocallyConnected
-# from models.CausalModel import CausalModel
+from utils.layers import FullyConnected
 from models.CausalModel import *
 import keras_tuner as kt
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TerminateOnNaN, EarlyStopping
 import os, sys
-import tensorflow_probability as tfp
 tf.get_logger().setLevel(logging.ERROR)
 import tensorflow.keras.backend as K
-from tensorflow.keras.metrics import binary_accuracy
 
 class HiddenPrints:
     def __enter__(self):

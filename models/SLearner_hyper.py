@@ -7,7 +7,6 @@ from tensorflow.keras.optimizers import Adam
 import keras_tuner as kt
 from tensorflow.keras.callbacks import EarlyStopping, TerminateOnNaN
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TerminateOnNaN, EarlyStopping
-from tensorflow.compat.v1.profiler import Profiler
 from os.path import exists
 import shutil
 
