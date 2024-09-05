@@ -8,7 +8,7 @@ from models.GANITE_hyper import *
 import scipy.stats
 import argparse
 from hyperparameters import *
-
+from utils.gnn_data import generate_graphs
 import tensorflow as tf
 from datetime import datetime
 import keras_tuner as kt
@@ -46,7 +46,6 @@ def main(args):
 
     datasets = {'ihdp_a', 'ihdp_b', 'jobs', 'sum'}
     ipm_list = {'wasserstein', 'None'}
-    cdm_list = {'lingam'}
 
     if args.model_name in model_names and args.dataset_name in datasets and args.ipm_type in ipm_list \
             and args.tuner_name in tuners:
@@ -67,7 +66,6 @@ def main(args):
         params['tuner_name'] = args.tuner_name
         params['num_layers'] = args.num_layers
         params['eye'] = eval(args.eye)
-        params['cdm'] = args.cdm
         model = model_name(params)
 
         metric_list_train, metric_list_test, average_train, average_test = model.evaluate_performance()
@@ -91,7 +89,7 @@ def main(args):
         file_name = folder_path + "/results_" + date_day + '.csv'
         file_exists = exists(file_name)
 
-        columns = ["time", "model_name", "dataset", "cdm", "defaults", "mean_train", "std_train", "mean_test", "std_test",
+        columns = ["time", "model_name", "dataset", "defaults", "mean_train", "std_train", "mean_test", "std_test",
                    "ate_mean_train", "std_mean_train", "ate_mean_test",
                    "std_mean_test", "tuner", "comments",  "params"]
         if file_exists:
@@ -106,7 +104,7 @@ def main(args):
             model_name = args.model_name
 
         # save results
-        result = pd.DataFrame([[date_time, model_name, args.dataset_name, args.cdm, str(args.defaults), m_train, h_train, m_test,
+        result = pd.DataFrame([[date_time, model_name, args.dataset_name, str(args.defaults), m_train, h_train, m_test,
                                 h_test, am_train, ah_train, am_test,
                                 ah_test, args.tuner_name, args.comments,
                                 model.sparams, ]],
@@ -124,20 +122,23 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Causal Model')
-    parser.add_argument("--model-name", default='TEDVAE', type=str)
+    parser.add_argument("--model-name", default='GNNTARnet', type=str)
     parser.add_argument("--ipm-type", default='wasserstein', type=str)
     parser.add_argument("--defaults", default="True", type=str)
-    parser.add_argument("--dataset-name", default='ihdp_a', type=str)
+    parser.add_argument("--dataset-name", default='ihdp_b', type=str)
     parser.add_argument("--tuner-name", default='random', type=str)
     parser.add_argument("--drop", default=None, type=int)
     parser.add_argument("--num", default=1, type=int)
     parser.add_argument("--eye", default="False", type=str)
     parser.add_argument("--num_layers", default=5, type=int)
-    parser.add_argument("--cdm", default='lingam', type=str)
     parser.add_argument("--comments", default='graph infly true', type=str)
     args = parser.parse_args()
 
     folder_path = "results"
     folder_exists = exists(folder_path)
-
+    # check if folder with graphs exists
+    graph_folder = "graphs/" + args.dataset_name
+    graphs_exist = exists(graph_folder)
+    if not graphs_exist:
+        generate_graphs(dataset_name=args.dataset_name)
     main(args)

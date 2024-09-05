@@ -394,7 +394,7 @@ class GNNTARnetHyper(CausalModel):
         if self.dataset_name == 'sum':
                 path = 'graphs/sum_graph_' + str(self.params['num_layers'])
         else:
-            path = 'graphs/' + self.params['dataset_name'] + '_' + self.params['cdm']
+            path = 'graphs/' + self.params['dataset_name'] 
 
         if not self.params['json']:
             file_name = '/graph_' + str(count) + '.csv'

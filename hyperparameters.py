@@ -87,7 +87,7 @@ def find_params(model_name, dataset_name):
                                'epochs': 300, 'binary': False, 'n_hidden_1': 6, 'n_hidden_0': 7,
                                'json': True,
                                'drop': None,
-                               'verbose': 0, 'kernel_init': 'RandomNormal', 'params': 'params_ihdp_a', 'max_trials': 10}
+                               'verbose': 1, 'kernel_init': 'RandomNormal', 'params': 'params_ihdp_a', 'max_trials': 10}
 
     params_GNNTARnet_IHDP_b = {'dataset_name': "ihdp_b", 'num': 100, 'lr': 1e-4, 'patience': 40, 'batch_size': 32,
                                'gnn_hidden_units': 128, 'gnn_n_fc': 4, 'aggregation_type': "sum", 'eye': False,
@@ -97,7 +97,7 @@ def find_params(model_name, dataset_name):
                                'drop': None,
                                'infl_y': True,
                                'hidden_y0': 208, 'epochs': 350, 'binary': False, 'n_hidden_1': 6,
-                               'n_hidden_0': 4, 'verbose': 0, 'kernel_init': 'GlorotNormal', 'params': 'params_ihdp_b',
+                               'n_hidden_0': 4, 'verbose': 1, 'kernel_init': 'GlorotNormal', 'params': 'params_ihdp_b',
                                'max_trials': 10}
 
     params_GNNTARnet_JOBS = {'dataset_name': "jobs", 'num': 100, 'lr': 1e-2, 'patience': 40, 'batch_size': 64,

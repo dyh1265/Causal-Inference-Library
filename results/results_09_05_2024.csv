@@ -23,5 +23,20 @@ time,model_name,dataset,cdm,defaults,mean_train,std_train,mean_test,std_test,ate
 17:58:14,GANITE,ihdp_a,lingam,True,0.6768764755593789,,0.6416130648129837,,0.3987474873042465,,0.4429380619640581,,random,graph infly true,"n_fc=5 - hidden_phi = 8 -
                       learning rate=0.001 - batch size = 64"
 17:58:48,SLearner,ihdp_a,lingam,True,0.953507794105134,,0.8420914723960179,,0.0947510714163937,,0.1673893886077833,,random,graph infly true,n_fc=3 - hidden_phi = 300
-17:59:14,TEDVAE,ihdp_a,lingam,True,0.39916115159389665,,0.3654823270869463,,0.08902492418453223,,0.13584234570935427,,random,graph infly true," n_fc_enc_x = 4 hidden_phi_enc_x = 500
+17:59:14,TEDVAE,ihdp_a,lingam,True,0.3991611515938966,,0.3654823270869463,,0.0890249241845322,,0.1358423457093542,,random,graph infly true," n_fc_enc_x = 4 hidden_phi_enc_x = 500
                                   n_fc_dec_x = 4  hidden_phi_dec_x = 500"
+19:08:47,GNNTARnet,ihdp_a,lingam,True,0.314874849147985,,0.3470595151378829,,0.0948973558936754,,0.153135252044529,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
+19:21:13,GNNTARnet,ihdp_a,lingam,True,0.4131713076862181,,0.3783587438083685,,0.1567732732801987,,0.1797630859288888,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
+20:13:10,GNNTARnet,ihdp_a,,True,0.314874842179372,,0.347059706489049,,0.0948974112896774,,0.1531353367807484,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
+20:14:48,GNNTARnet,ihdp_a,,True,0.3988319164010391,,0.525153026426789,,0.1632881124841829,,0.2391774715113253,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 7 n_hidden_1 = 6
+             hidden_y0 = 96  hidden_y1 = 240"
+20:25:09,GNNTARnet,ihdp_b,,True,1.9574625090151059,,2.425732829009384,,0.30129508404183714,,0.1231311225045908,,random,graph infly true," gnn_n_fc = 4 gnn_hidden_units = 128
+             n_hidden_0 = 4 n_hidden_1 = 6
+             hidden_y0 = 208  hidden_y1 = 240"
