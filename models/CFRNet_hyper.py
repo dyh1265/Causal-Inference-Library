@@ -9,7 +9,6 @@ import tensorflow_probability as tfp
 from utils.callback import callbacks
 from tensorflow.keras.metrics import binary_accuracy
 from utils.layers import FullyConnected
-from utils.custom_dataset import DataGen
 import keras_tuner as kt
 import warnings
 tfd = tfp.distributions
