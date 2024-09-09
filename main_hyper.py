@@ -4,7 +4,6 @@ from models.GNN_TARnet_hyper import *
 from models.SLearner_hyper import *
 from models.TLearner_hyper import *
 from models.TEDVAE_hyper import *
-from models.GANITE_hyper import *
 import scipy.stats
 import argparse
 from hyperparameters import *
@@ -40,7 +39,7 @@ def main(args):
     model_names = {"TARnet": TARnetHyper,
                    "GNNTARnet": GNNTARnetHyper,
                    "TLearner": TLearner, "CFRNet": CFRNet,
-                   "GANITE": GANITE, "SLearner": SLearner, "TEDVAE": TEDVAE
+                    "SLearner": SLearner, "TEDVAE": TEDVAE
                    }
     tuners = {'random': kt.RandomSearch}
 
