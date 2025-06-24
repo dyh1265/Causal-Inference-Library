@@ -467,7 +467,7 @@ class CFRNet(CausalModel):
         objective = kt.Objective(monitor_metric, direction="min")
         tuner = self.define_tuner(hypermodel, hp, objective, directory_name, project_name)
 
-        stop_early = [TerminateOnNaN(), EarlyStopping(monitor=monitor_metric, patience=5)]
+        stop_early = [TerminateOnNaN(), EarlyStopping(monitor=monitor_metric, patience=5, mode='min')]
         tuner.search(x, yt, validation_split=0.2, epochs=50, callbacks=[stop_early], verbose=1)
 
         best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]

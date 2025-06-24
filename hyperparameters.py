@@ -4,7 +4,7 @@ def find_params(model_name, dataset_name):
     params_SLearner_IHDP_a = {'dataset_name': "ihdp_a", 'num': 100, 'lr': 1e-3, 'patience': 40,
                               'batch_size': 64, 'reg_l2': .01, 'activation': 'linear', 'hidden_phi': 300,
                               'epochs': 300, 'binary': False, 'n_fc': 3, 'verbose': 1, 'val_split': 0.0,
-                              'kernel_init': 'RandomNormal', 'max_trials': 10}
+                              'kernel_init': 'RandomNormal', 'max_trials': 3}
 
     params_SLearner_IHDP_b = {'dataset_name': "ihdp_b", 'num': 100, 'lr': 1e-3, 'patience': 40,
                               'batch_size': 64, 'reg_l2': .01, 'activation': 'linear', 'hidden_phi': 300,
@@ -27,7 +27,7 @@ def find_params(model_name, dataset_name):
                               'batch_size': 64, 'reg_l2': .01, 'activation': 'linear',
                               'epochs': 300, 'binary': False, 'n_fc': 3, 'hidden_phi': 300,
                               'verbose': 0, 'model_name': 'TLearner',
-                              'max_trials': 10, 'kernel_init': 'RandomNormal'}
+                              'max_trials': 3, 'kernel_init': 'RandomNormal'}
 
     params_TLearner_IHDP_b = {'dataset_name': "ihdp_b", 'num': 100, 'lr': 1e-2, 'patience': 40,
                               'batch_size': 64, 'reg_l2': .01, 'activation': 'linear',
@@ -53,7 +53,7 @@ def find_params(model_name, dataset_name):
                             'hidden_y0': 100, 'epochs': 300, 'binary': False, 'n_fc': 3, 'n_fc_y1': 3,
                             'defaults': False,
                             'n_fc_y0': 3, 'verbose': 1, 'kernel_init': 'RandomNormal', 'params': 'params_ihdp_a',
-                            'max_trials': 10, 'out_size': 1}
+                            'max_trials': 3, 'out_size': 1}
 
     params_TARnet_IHDP_b = {'dataset_name': "ihdp_b", 'num': 100, 'lr': 1e-4, 'patience': 5, 'batch_size': 32,
                             'reg_l2': .01, 'activation': 'linear', 'hidden_phi': 200, 'hidden_y1': 100,
@@ -156,7 +156,7 @@ def find_params(model_name, dataset_name):
                             'batch_size': 1024, 'reg_l2': .01, 'activation': 'linear', 'epochs': 300,
                             'binary': False, 'verbose': 0, 'kernel_init': 'RandomNormal', 'defaults': False,
                             'n_fc': 3, 'hidden_phi': 200, 'n_fc_y0': 3, 'hidden_y0': 100, 'n_fc_y1': 3,
-                            'hidden_y1': 100, 'max_trials': 10, 'n_fc_t': 3, 'hidden_t': 100
+                            'hidden_y1': 100, 'max_trials': 3, 'n_fc_t': 3, 'hidden_t': 100
                             }
 
     params_CFRNet_IHDP_b = {'dataset_name': "ihdp_b", 'num': 100, 'lr': 1e-3, 'patience': 5,
