@@ -5,15 +5,12 @@ from tensorflow.keras import Model
 from tensorflow.keras.losses import Loss
 from tensorflow.keras.callbacks import EarlyStopping, TerminateOnNaN
 from tensorflow.keras.optimizers import Adam, SGD
-import tensorflow_probability as tfp
 from utils.callback import callbacks
 from tensorflow.keras.metrics import binary_accuracy
 from utils.layers import FullyConnected
 import keras_tuner as kt
 import warnings
-tfd = tfp.distributions
 from sklearn.manifold import TSNE
-import seaborn as sns
 import matplotlib.pyplot as plt
 from os.path import exists
 import shutil

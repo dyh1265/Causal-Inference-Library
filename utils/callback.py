@@ -6,7 +6,7 @@ def callbacks(rlr_monitor):
         TerminateOnNaN(),
         ReduceLROnPlateau(monitor=rlr_monitor, factor=0.5, patience=5, verbose=0, mode='auto',
                           min_delta=0., cooldown=0, min_lr=1e-8),
-        EarlyStopping(monitor=rlr_monitor, patience=40, restore_best_weights=True)
+        EarlyStopping(monitor=rlr_monitor, patience=40, restore_best_weights=True, mode='min')
     ]
 
     return cbacks

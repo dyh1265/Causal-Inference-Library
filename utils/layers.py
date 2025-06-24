@@ -1,9 +1,5 @@
 from tensorflow.keras.layers import Layer, Dense, BatchNormalization, Dropout
-import tensorflow_probability as tfp
 
-
-tfpl = tfp.layers
-tfd = tfp.distributions
 
 class FullyConnected(Layer):
     def __init__(self, n_fc, hidden_phi, out_size,  final_activation, name, kernel_reg, kernel_init, activation='elu',

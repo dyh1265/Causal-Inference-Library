@@ -111,7 +111,7 @@ def main(args):
         if results.empty:
             results = result
         else:
-            results = results.append(result, ignore_index=True)
+            results = results._append(result, ignore_index=True)
         # save the results
         results.to_csv(file_name, index=False)
         return 0
@@ -121,9 +121,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Causal Model')
-    parser.add_argument("--model-name", default='GNNTARnet', type=str)
+    parser.add_argument("--model-name", default='TARnet', type=str)
     parser.add_argument("--ipm-type", default='wasserstein', type=str)
-    parser.add_argument("--defaults", default="True", type=str)
+    parser.add_argument("--defaults", default="False", type=str)
     parser.add_argument("--dataset-name", default='ihdp_a', type=str)
     parser.add_argument("--tuner-name", default='random', type=str)
     parser.add_argument("--drop", default=None, type=int)

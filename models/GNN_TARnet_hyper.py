@@ -1,3 +1,4 @@
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -10,39 +11,43 @@ from models.CausalModel import *
 import keras_tuner as kt
 from tensorflow.keras.callbacks import ReduceLROnPlateau, TerminateOnNaN, EarlyStopping
 import os, sys
+import tensorflow as tf
+import logging
 tf.get_logger().setLevel(logging.ERROR)
 import tensorflow.keras.backend as K
 
 class HiddenPrints:
-    def __enter__(self):
+    def __enter__(self, name='my_model_name'):
         self._original_stdout = sys.stdout
         sys.stdout = open(os.devnull, 'w')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.close()
         sys.stdout = self._original_stdout
-import json
-from os.path import exists
 
-os.environ['TF_DISABLE_SEGMENT_REDUCTION_OP_DETERMINISM_EXCEPTIONS'] = '1'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-import matplotlib.pyplot as plt
-
-plt.show()
 import json
 from os.path import exists
 import shutil
 
+os.environ['TF_DISABLE_SEGMENT_REDUCTION_OP_DETERMINISM_EXCEPTIONS'] = '1'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
+import matplotlib.pyplot as plt
+
+plt.ion()  # Enable interactive mode
+# plt.show() is not needed in script mode
+
+import json
+from os.path import exists
 
 def callbacks(rlr_monitor):
     cbacks = [
         TerminateOnNaN(),
-        ReduceLROnPlateau(monitor=rlr_monitor, factor=0.5, patience=5, verbose=0, mode='auto',
+        ReduceLROnPlateau(monitor=rlr_monitor, factor=0.5, patience=5, verbose=0, mode='min',
                           min_delta=0., cooldown=0, min_lr=1e-8),
-        EarlyStopping(monitor='val_regression_loss', patience=40, min_delta=0., restore_best_weights=False)
+        EarlyStopping(monitor='val_regression_loss', mode='min', patience=40, min_delta=0., restore_best_weights=False)  # Added mode='min'
     ]
     return cbacks
-
 
 class HyperGNNTarnet(kt.HyperModel, CausalModel):
     def __init__(self, params, name='gnn_tarnet'):
@@ -60,7 +65,7 @@ class HyperGNNTarnet(kt.HyperModel, CausalModel):
         )
 
         model.compile(optimizer=SGD(learning_rate=self.params['lr'], nesterov=True, momentum=momentum),
-                      loss=self.regression_loss,
+                      loss=self.regression_loss,  # Assumed defined in CausalModel
                       metrics=[self.regression_loss], run_eagerly=False
                       )
         return model
@@ -71,7 +76,6 @@ class HyperGNNTarnet(kt.HyperModel, CausalModel):
             batch_size=self.params['batch_size'],
             **kwargs,
         )
-
 
 class GraphConvLayer(layers.Layer):
     def __init__(
@@ -104,13 +108,10 @@ class GraphConvLayer(layers.Layer):
                                         name='update_fn')
 
     def prepare(self, node_representations):
-        # node_representations shape is [num_edges, embedding_dim].
         messages = self.ffn_prepare(node_representations)
         return messages
 
     def aggregate(self, node_indices, neighbour_messages, node_representations):
-        # node_indices shape is [num_edges].
-        # neighbour_messages shape: [num_edges, representation_dim].
         num_nodes = node_representations.shape[1]
         if self.aggregation_type == "sum":
             aggregated_message = tf.math.unsorted_segment_sum(tf.transpose(neighbour_messages, [1, 0, 2]),
@@ -128,13 +129,9 @@ class GraphConvLayer(layers.Layer):
         return aggregated_message
 
     def update(self, node_representations, aggregated_messages):
-        # node_representations shape is [num_nodes, representation_dim].
-        # aggregated_messages shape is [num_nodes, representation_dim].
         if self.combination_type == "concat":
-            # Concatenate the node_representations and aggregated_messages.
             h = tf.concat([node_representations, aggregated_messages], axis=2)
         elif self.combination_type == "add":
-            # Add node_representations and aggregated_messages.
             h = node_representations + aggregated_messages
         elif self.combination_type == "mlp":
             h = node_representations * aggregated_messages
@@ -147,21 +144,15 @@ class GraphConvLayer(layers.Layer):
         return node_embeddings
 
     def call(self, inputs):
-        """Process the inputs to produce the node_embeddings.
-
-        inputs: a tuple of three elements: node_representations, edges, edge_weights.
-        Returns: node_embeddings of shape [num_nodes, representation_dim].
-        """
         node_representations, edges, edge_weights = inputs
-        # Get node_indices (source) and parent_indices (target) from edges.
+        # Validate inputs
+        if edge_weights is None:
+            edge_weights = tf.ones([tf.shape(edges)[0]], dtype=tf.float32)  # Default weights if None
         parent_indices, node_indices = edges[:, 0], edges[:, 1]
-        parents_repesentations = tf.gather(node_representations, parent_indices, axis=1)
-        # Prepare the messages of the parents.
-        parent_messages = self.prepare(parents_repesentations)
-        # Aggregate the parents messages.
+        parents_representations = tf.gather(node_representations, parent_indices, axis=1)
+        parent_messages = self.prepare(parents_representations)
         aggregated_messages = self.aggregate(node_indices, parent_messages, node_representations)
         return self.update(node_representations, aggregated_messages)
-
 
 class Embedding(Model):
     def __init__(self, params, vector_size, num_neurons):
@@ -172,9 +163,9 @@ class Embedding(Model):
         self.networks = []
         for i in range(vector_size):
             x = FullyConnected(n_fc=1, hidden_phi=1,
-                                      final_activation=None, out_size=self.num_neurons,
-                                      kernel_init=self.params['kernel_init'],
-                                      kernel_reg=regularizers.l2(.01), name='pred_y'+str(i))
+                               final_activation=None, out_size=self.num_neurons,
+                               kernel_init=self.params['kernel_init'],
+                               kernel_reg=regularizers.l2(.01), name='pred_y'+str(i))
             self.networks.append(x)
 
     def call(self, inputs):
@@ -199,9 +190,7 @@ class GNNTARnetModel(Model):
         self.params = params
         self.model_name = name
         self.edges = params['edges']
-        self.gnn_weights = params['weights']
-        # self.gnn_n_fc = self.params['gnn_n_fc']
-        # self.gnn_hidden_units = self.params['gnn_hidden_units']
+        self.gnn_weights = params['weights']  # Store weights
         self.gnn_n_fc = hp.Int('gnn_n_fc', min_value=2, max_value=10, step=1)
         self.gnn_hidden_units = hp.Int('gnn_hidden_units', min_value=16, max_value=256, step=16)
         self.n_hidden_0 = hp.Int('n_hidden_0', min_value=2, max_value=10, step=1)
@@ -209,7 +198,6 @@ class GNNTARnetModel(Model):
         self.n_hidden_1 = hp.Int('n_hidden_1', min_value=2, max_value=10, step=1)
         self.hidden_y1 = hp.Int('hidden_y1', min_value=16, max_value=256, step=16)
 
-        # Create the first GraphConv layer.
         self.conv1 = GraphConvLayer(
             params=self.params,
             gnn_n_fc=self.gnn_n_fc,
@@ -217,7 +205,6 @@ class GNNTARnetModel(Model):
             name="graph_conv1"
         )
 
-        # # Create the second GraphConv layer.
         self.conv2 = GraphConvLayer(
             params=self.params,
             gnn_n_fc=self.gnn_n_fc,
@@ -237,30 +224,22 @@ class GNNTARnetModel(Model):
                                       kernel_init=self.params['kernel_init'],
                                       kernel_reg=regularizers.l2(.01), name='pred_y1')
 
-
         self.flatten = layers.Flatten()
 
     def call(self, inputs):
         x = inputs
         x = self.embedding(x)
-        # Apply the first graph conv layer.
-        x1 = self.conv1((x, self.edges, None))
-        # # Skip connection.
-        x = x1 + x
-        # # # # Apply the second graph conv layer.
-        x2 = self.conv2((x, self.edges, None))
-        x = x2 + x
-        # # # use info about nodes influencing the outcome
+        # Use gnn_weights instead of None
+        x1 = self.conv1([x, self.edges, self.gnn_weights])
+        x = x1 + x  # Skip connection
+        x2 = self.conv2([x, self.edges, self.gnn_weights])
+        x = x2 + x  # Skip connection
         x = tf.gather(x, self.params['influence_y'], axis=1)
-        # # Flatten
         x = self.flatten(x)
-        # Make a prediction
         y0_pred = self.pred_y0(x)
         y1_pred = self.pred_y1(x)
-        # Concatenate the result and return
         concat_pred = tf.concat([y0_pred, y1_pred], axis=-1)
         return concat_pred
-
 
 class GNNTARnetHyper(CausalModel):
     def __init__(self, params):
@@ -278,8 +257,13 @@ class GNNTARnetHyper(CausalModel):
         t = tf.cast(t, dtype=tf.float32)
         yt = tf.concat([y, t], axis=1)
 
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("edges shape:", edges.shape)
+        print("weights shape:", weights.shape if weights is not None else "weights is None")
+
         directory_name = 'params_' + self.params['tuner_name'] + '/' + self.params['dataset_name']
-        setSeed(seed)
+        setSeed(seed)  # Assumed defined elsewhere
 
         project_name = self.params["model_name"]
 
@@ -297,10 +281,22 @@ class GNNTARnetHyper(CausalModel):
         objective = kt.Objective("val_regression_loss", direction="min")
         tuner = self.define_tuner(hypermodel, hp, objective, directory_name, project_name)
 
-        stop_early = [TerminateOnNaN(), EarlyStopping(monitor='regression_loss', patience=5)]
-        tuner.search(x, yt, epochs=50, validation_split=0.2, callbacks=[stop_early], verbose=self.params['verbose'])
+        # Check for valid trials
+        tuner_dir = os.path.join(directory_name, project_name)
+        if os.path.exists(tuner_dir) and any(os.listdir(tuner_dir)):
+            trials = tuner.oracle.get_best_trials(num_trials=1)
+            if trials:
+                print("Loading existing trials from", tuner_dir, f"({len(tuner.oracle.trials)} trials found)")
+                return
+            else:
+                print("Directory exists but no valid trials found in", tuner_dir)
 
-        return
+        print("Starting new hyperparameter search...")
+        stop_early = [
+            TerminateOnNaN(),
+            EarlyStopping(monitor='val_regression_loss', mode='min', patience=5)  # Ensure correct monitor
+        ]
+        tuner.search(x, yt, epochs=50, validation_split=0.2, callbacks=stop_early, verbose=self.params['verbose'])
 
     def fit_model(self, seed=0, count=0, **kwargs):
         x = kwargs['x']
@@ -312,6 +308,11 @@ class GNNTARnetHyper(CausalModel):
         yt = tf.concat([y, t], axis=1)
         setSeed(seed)
 
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("edges shape:", edges.shape)
+        print("weights shape:", weights.shape if weights is not None else "weights is None")
+
         self.params['edges'] = edges
         self.params['weights'] = weights
         self.params['num_edges'] = edges.shape[0]
@@ -320,16 +321,35 @@ class GNNTARnetHyper(CausalModel):
             HyperGNNTarnet(params=self.params),
             directory=self.directory_name,
             project_name=self.project_name,
-            seed=0)
+            overwrite=False,
+            seed=0
+        )
 
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+        # Get best hyperparameters with fallback
+        best_hps_list = tuner.get_best_hyperparameters(num_trials=1)
+        if not best_hps_list:
+            print("No valid trials found, using default hyperparameters")
+            best_hps = kt.HyperParameters()
+            best_hps.values = {
+                'gnn_n_fc': self.params.get('gnn_n_fc', 2),  # Fallback to defaults
+                'gnn_hidden_units': self.params.get('gnn_hidden_units', 16),
+                'n_hidden_0': self.params.get('n_hidden_0', 2),
+                'hidden_y0': self.params.get('hidden_y0', 16),
+                'n_hidden_1': self.params.get('n_hidden_1', 2),
+                'hidden_y1': self.params.get('hidden_y1', 16)
+            }
+        else:
+            best_hps = best_hps_list[0]
+
         if self.params['defaults']:
-            best_hps.values = {'gnn_n_fc': self.params['gnn_n_fc'],
-                                'gnn_hidden_units': self.params['gnn_hidden_units'],
-                                'n_hidden_0': self.params['n_hidden_0'],
-                               'hidden_y0': self.params['hidden_y0'],
-                               'n_hidden_1': self.params['n_hidden_1'],
-                               'hidden_y1': self.params['hidden_y1']}
+            best_hps.values = {
+                'gnn_n_fc': self.params['gnn_n_fc'],
+                'gnn_hidden_units': self.params['gnn_hidden_units'],
+                'n_hidden_0': self.params['n_hidden_0'],
+                'hidden_y0': self.params['hidden_y0'],
+                'n_hidden_1': self.params['n_hidden_1'],
+                'hidden_y1': self.params['hidden_y1']
+            }
         else:
             self.params['gnn_n_fc'] = best_hps.get('gnn_n_fc')
             self.params['gnn_hidden_units'] = best_hps.get('gnn_hidden_units')
@@ -340,25 +360,29 @@ class GNNTARnetHyper(CausalModel):
 
         model = tuner.hypermodel.build(best_hps)
         stop_early = [
-            ReduceLROnPlateau(monitor='regression_loss', factor=0.5, patience=5, verbose=0, mode='auto',
+            ReduceLROnPlateau(monitor='regression_loss', factor=0.5, patience=5, verbose=0, mode='min',
                               min_delta=0., cooldown=0, min_lr=1e-8),
-            EarlyStopping(monitor='regression_loss', patience=40, restore_best_weights=True)]
+            EarlyStopping(monitor='regression_loss', mode='min', patience=40, restore_best_weights=True)
+        ]
 
-        model.fit(x=x, y=yt,
-                  validation_split=0.0,
-                  callbacks=stop_early,
-                  epochs=self.params['epochs'],
-                  verbose=self.params['verbose'],
-                  batch_size=self.params['batch_size'])
+        model.fit(
+            x=x, y=yt,
+            validation_split=0.0,
+            callbacks=stop_early,
+            epochs=self.params['epochs'],
+            verbose=self.params['verbose'],
+            batch_size=self.params['batch_size']
+        )
 
         if count == 0:
             print(model.summary())
-            self.sparams = f""" gnn_n_fc = {best_hps.get('gnn_n_fc')} gnn_hidden_units = {best_hps.get('gnn_hidden_units')}
+            self.sparams = f"""gnn_n_fc = {best_hps.get('gnn_n_fc')} gnn_hidden_units = {best_hps.get('gnn_hidden_units')}
              n_hidden_0 = {best_hps.get('n_hidden_0')} n_hidden_1 = {best_hps.get('n_hidden_1')}
-             hidden_y0 = {best_hps.get('hidden_y0')}  hidden_y1 = {best_hps.get('hidden_y1')}"""
-            print(f"""The hyperparameter search is complete. the optimal hyperparameters are
-                              {self.sparams}""")
+             hidden_y0 = {best_hps.get('hidden_y0')} hidden_y1 = {best_hps.get('hidden_y1')}"""
+            print(f"""The hyperparameter search is complete. The optimal hyperparameters are
+                      {self.sparams}""")
         return model
+
 
     def load_graph(self, path):
         if self.params['json']:
@@ -375,26 +399,19 @@ class GNNTARnetHyper(CausalModel):
             influence_y = np.asarray(graph['influence_y'])
             edge_weights = np.asarray(graph['weights'])
             edge_weights = np.expand_dims(edge_weights / np.sum(edge_weights, axis=0), axis=-1)
-            graph_info = {'edges': edges, 'edge_weights': edge_weights, 'influence_y': influence_y}
-            return graph_info
         else:
             edges = np.asarray(graph)
             influence_y = []
-            """Get non-zero elements from acyclic_W for edges and stack them to match the num of patients.
-            Create an edges array (sparse adjacency matrix) of shape [num_samples, 2, num_edges]."""
-
-            """Create an edge weights array of ones."""
-            edge_weights = np.ones(shape=(edges.shape[0]))
+            edge_weights = np.ones(shape=(edges.shape[0]))  # Ensure valid weights
             edge_weights = np.expand_dims(edge_weights / np.sum(edge_weights, axis=0), axis=-1)
+        graph_info = {'edges': edges, 'edge_weights': edge_weights, 'influence_y': influence_y}
+        return graph_info
 
-            graph_info = {'edges': edges, 'edge_weights': edge_weights, 'influence_y': influence_y}
-            return graph_info
     def load_graphs(self, x_train, count):
-
-        if self.dataset_name == 'sum':
-                path = 'graphs/sum_graph_' + str(self.params['num_layers'])
+        if self.params['dataset_name'] == 'sum':
+            path = 'graphs/sum_graph_' + str(self.params['num_layers'])
         else:
-            path = 'graphs/' + self.params['dataset_name'] 
+            path = 'graphs/' + self.params['dataset_name']
 
         if not self.params['json']:
             file_name = '/graph_' + str(count) + '.csv'
@@ -426,8 +443,8 @@ class GNNTARnetHyper(CausalModel):
 
         graph_info = self.load_graphs(x_train=x_train, count=kwargs.get('count'))
 
-        self.params['num_edges'] = len(graph_info['edges'][1])
-        self.params['influence_y'] =  graph_info['influence_y']
+        self.params['num_edges'] = len(graph_info['edges'])
+        self.params['influence_y'] = graph_info['influence_y']
 
         edges = graph_info['edges']
         weights = graph_info['edge_weights']
@@ -435,9 +452,6 @@ class GNNTARnetHyper(CausalModel):
             y_train = data_train['y']
         else:
             y_train = data_train['ys']
-
-        # x_train[:, :] = 0
-        # x_test[:, :] = 0
 
         args_train = {'x': x_train, 't': t_train, 'y': y_train, 'edges': edges, 'weights': weights}
 
@@ -450,10 +464,8 @@ class GNNTARnetHyper(CausalModel):
         self.fit_tuner(seed=0, **args_train)
         model = self.fit_model(**args_train, count=kwargs.get('count'))
 
-        # make a prediction
         concat_pred_test = self.evaluate(x_test, model)
         concat_pred_train = self.evaluate(x_train, model)
-
 
         y0_pred_test, y1_pred_test = concat_pred_test[:, 0], concat_pred_test[:, 1]
         y0_pred_test = tf.expand_dims(y0_pred_test, axis=1)
@@ -484,8 +496,7 @@ class GNNTARnetHyper(CausalModel):
                       pehe_train)
             else:
                 print(kwargs.get('count'), 'Pehe Test = ', pehe_test, ' Pehe Train = ', pehe_train, ' ATE test = ',
-                      ate_test,
-                      ' ATE train = ', ate_train)
+                      ate_test, ' ATE train = ', ate_train)
 
             metric_list_test.append(pehe_test)
             metric_list_train.append(pehe_train)
@@ -499,4 +510,3 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
-

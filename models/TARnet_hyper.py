@@ -1,4 +1,6 @@
+
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras import regularizers
 from tensorflow.keras import Model
 from tensorflow.keras.optimizers import SGD
@@ -7,8 +9,9 @@ from utils.layers import FullyConnected
 import keras_tuner as kt
 from utils.callback import callbacks
 from tensorflow.keras.callbacks import EarlyStopping, TerminateOnNaN
-from os.path import exists
+import os
 import shutil
+
 class HyperTarnet(kt.HyperModel, CausalModel):
     def __init__(self, params):
         super().__init__()
@@ -28,7 +31,6 @@ class HyperTarnet(kt.HyperModel, CausalModel):
             batch_size=self.params['batch_size'],
             **kwargs,
         )
-
 
 class TarnetModel(Model):
     def __init__(self, name, params, hp, **kwargs):
@@ -60,9 +62,7 @@ class TarnetModel(Model):
         concat_pred = tf.concat([y0_pred, y1_pred], axis=-1)
         return concat_pred
 
-
 class TARnetHyper(CausalModel):
-
     def __init__(self, params):
         super().__init__(params)
         self.params = params
@@ -73,63 +73,112 @@ class TARnetHyper(CausalModel):
     def fit_tuner(self, x, y, t, seed):
         setSeed(seed)
         t = tf.cast(t, dtype=tf.float32)
+        yt = tf.concat([y, t], axis=1)
+
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("y shape:", y.shape)
+        print("t shape:", t.shape)
+
         directory_name = 'params_' + self.params['tuner_name'] + '/' + self.params['dataset_name']
-
-        if self.dataset_name == 'gnn':
-            directory_name = directory_name + f'/{self.params["model_name"]}'
-            project_name = str(self.folder_ind)
-        else:
-            project_name = self.params["model_name"]
-
-        hp = kt.HyperParameters()
+        project_name = self.params["model_name"]
 
         self.directory_name = directory_name
         self.project_name = project_name
 
+        hp = kt.HyperParameters()
         hypermodel = HyperTarnet(params=self.params)
         objective = kt.Objective("val_regression_loss", direction="min")
         tuner = self.define_tuner(hypermodel, hp, objective, directory_name, project_name)
 
-        yt = tf.concat([y, t], axis=1)
-        stop_early = [TerminateOnNaN(), EarlyStopping(monitor='val_regression_loss', patience=5)]
-        tuner.search(x, yt, epochs=50, validation_split=0.2, callbacks=[stop_early], verbose=self.params['verbose'])
+        # Check for valid trials
+        tuner_dir = os.path.join(directory_name, project_name)
+        if os.path.exists(tuner_dir) and any(os.listdir(tuner_dir)):
+            trials = tuner.oracle.get_best_trials(num_trials=1)
+            if trials:
+                print("Loading existing trials from", tuner_dir, f"({len(tuner.oracle.trials)} trials found)")
+                return
+            else:
+                print("Directory exists but no valid trials found in", tuner_dir)
 
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-        if self.params['defaults']:
-            best_hps.values = {'n_fc': self.params['n_fc'],
-                                'hidden_phi': self.params['hidden_phi'],
-                               'n_fc_y0': self.params['n_fc_y0'],
-                               'hidden_y0': self.params['hidden_y0'],
-                               'n_fc_y1': self.params['n_fc_y1'],
-                               'hidden_y1': self.params['hidden_y1']}
-        self.best_hps = best_hps
+        print("Starting new hyperparameter search...")
+        stop_early = [
+            TerminateOnNaN(),
+            EarlyStopping(monitor='val_regression_loss', mode='min', patience=5)
+        ]
+        tuner.search(x, yt, epochs=50, validation_split=0.2, callbacks=stop_early, verbose=self.params['verbose'])
 
-        return
 
     def fit_model(self, x, y, t, count, seed):
         setSeed(seed)
         t = tf.cast(t, dtype=tf.float32)
+        yt = tf.concat([y, t], axis=1)
 
-        tuner = kt.RandomSearch(
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("y shape:", y.shape)
+        print("t shape:", t.shape)
+
+        tuner = self.params['tuner'](
             HyperTarnet(params=self.params),
             directory=self.directory_name,
             project_name=self.project_name,
-            seed=0)
+            overwrite=False,
+            seed=0
+        )
 
-        best_hps = self.best_hps
+        # Load best hyperparameters with fallback
+        best_hps_list = tuner.get_best_hyperparameters(num_trials=1)
+        if not best_hps_list:
+            print("No valid trials found, using default hyperparameters")    
+            best_hps = kt.HyperParameters()
+            best_hps.values = {        
+                'n_fc': self.params.get('n_fc', 2),
+                'hidden_phi': self.params.get('hidden_phi', 16),
+                'n_fc_y0': self.params.get('n_fc_y0', 2),
+                'hidden_y0': self.params.get('hidden_y0', 16),
+                'n_fc_y1': self.params.get('n_fc_y1', 2),
+                'hidden_y1': self.params.get('hidden_y1', 16)
+            }
+        else:
+            best_hps = best_hps_list[0]
+            print("Loaded best hyperparameters:", best_hps.values)
+
+        # Update self.best_hps
+        self.best_hps = best_hps
+
+        # Update params if not using defaults
+        if self.params['defaults']:
+              best_hps.values = {
+                'n_fc': self.params['n_fc'],
+                'hidden_phi': self.params['hidden_phi'],
+                'n_fc_y0': self.params['n_fc_y0'],
+                'hidden_y0': self.params['hidden_y0'],
+                'n_fc_y1': self.params['n_fc_y1'],
+                'hidden_y1': self.params['hidden_y1']
+            }
+        else:
+            self.params['n_fc'] = best_hps.get('n_fc')
+            self.params['hidden_phi'] = best_hps.get('hidden_phi')
+            self.params['n_fc_y0'] = best_hps.get('n_fc_y0')
+            self.params['hidden_y0'] = best_hps.get('hidden_y0')
+            self.params['n_fc_y1'] = best_hps.get('n_fc_y1')
+            self.params['hidden_y1'] = best_hps.get('hidden_y1')
+
         model = tuner.hypermodel.build(best_hps)
-        yt = tf.concat([y, t], axis=1)
-        model.fit(x=x, y=yt,
-                  callbacks=callbacks('regression_loss'),
-                  validation_split=0.0,
-                  epochs=self.params['epochs'],
-                  batch_size=self.params['batch_size'],
-                  verbose=self.params['verbose'])
+        model.fit(
+            x=x,
+            y=yt,
+            callbacks=callbacks('regression_loss'),
+            validation_split=0.0,
+            epochs=self.params['epochs'],
+            batch_size=self.params['batch_size'],
+            verbose=self.params['verbose']
+        )
 
-        self.sparams = f"""n_fc={best_hps.get('n_fc')} hidden_phi = {best_hps.get('hidden_phi')}
-              hidden_y1 = {best_hps.get('hidden_y1')} n_fc_y1 = {best_hps.get('n_fc_y1')}
-              hidden_y0 = {best_hps.get('hidden_y0')}  n_fc_y0 = {best_hps.get('n_fc_y0')}"""
-
+        self.sparams = f"""n_fc={best_hps.get('n_fc')} hidden_phi={best_hps.get('hidden_phi')}
+              hidden_y1={best_hps.get('hidden_y1')} n_fc_y1={best_hps.get('n_fc_y1')}
+              hidden_y0={best_hps.get('hidden_y0')} n_fc_y0={best_hps.get('n_fc_y0')}"""
 
         if count == 0 and self.folder_ind == 0:
             print(f"""The hyperparameter search is complete. The optimal hyperparameters are
@@ -143,22 +192,17 @@ class TARnetHyper(CausalModel):
         return model.predict(x_test)
 
     def train_and_evaluate(self, metric_list_train, metric_list_test, average_metric_list_train, average_metric_list_test, **kwargs):
-        # kwargs['count'] = 87
         data_train, data_test = self.load_data(**kwargs)
-
         count = kwargs.get('count')
-        self.folder_ind = kwargs.get('folder_ind') - 1
+        self.folder_ind = kwargs.get('folder_ind', 1) - 1
 
         if self.params['binary']:
-            # fit tuner on the first dataset
             self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
             model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
         else:
-            # fit tuner on the first dataset
             self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
             model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
 
-        # make a prediction
         concat_pred_test = self.evaluate(data_test['x'], model)
         concat_pred_train = self.evaluate(data_train['x'], model)
 
@@ -169,7 +213,6 @@ class TARnetHyper(CausalModel):
         y0_pred_train, y1_pred_train = concat_pred_train[:, 0], concat_pred_train[:, 1]
         y0_pred_train = tf.expand_dims(y0_pred_train, axis=1)
         y1_pred_train = tf.expand_dims(y1_pred_train, axis=1)
-
 
         if self.params['dataset_name'] == 'jobs':
             _, policy_risk_test, _, test_ATT = self.find_policy_risk(y0_pred_test, y1_pred_test, data_test)
@@ -183,7 +226,6 @@ class TARnetHyper(CausalModel):
 
             average_metric_list_test.append(test_ATT)
             average_metric_list_train.append(train_ATT)
-
         else:
             pehe_test, ate_test = self.find_pehe(y0_pred_test, y1_pred_test, data_test)
             pehe_train, ate_train = self.find_pehe(y0_pred_train, y1_pred_train, data_train)
@@ -193,8 +235,7 @@ class TARnetHyper(CausalModel):
                       pehe_train)
             else:
                 print(kwargs.get('count'), 'Pehe Test = ', pehe_test, ' Pehe Train = ', pehe_train, ' ATE test = ',
-                      ate_test,
-                      ' ATE train = ', ate_train)
+                      ate_test, ' ATE train = ', ate_train)
 
             metric_list_test.append(pehe_test)
             metric_list_train.append(pehe_train)

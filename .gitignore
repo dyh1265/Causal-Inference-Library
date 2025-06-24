@@ -1,3 +1,7 @@
 /Emissions
 /plot_results.ipynb
 /causalai
+*.pyc
+*.json
+*.h5
+*2025.csv

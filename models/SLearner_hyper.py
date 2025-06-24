@@ -1,14 +1,17 @@
-from keras import Model
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import regularizers
+from tensorflow.keras import Model
+from tensorflow.keras.optimizers import Adam
 from models.CausalModel import *
 from utils.layers import FullyConnected
 from utils.callback import callbacks
 from utils.set_seed import setSeed
-from tensorflow.keras.optimizers import Adam
-import keras_tuner as kt
 from tensorflow.keras.callbacks import EarlyStopping, TerminateOnNaN
-from tensorflow.keras.callbacks import ReduceLROnPlateau, TerminateOnNaN, EarlyStopping
+from tensorflow.keras.callbacks import ReduceLROnPlateau
 from os.path import exists
 import shutil
+import os
 
 
 class HyperSLearner(kt.HyperModel, CausalModel):
@@ -20,7 +23,6 @@ class HyperSLearner(kt.HyperModel, CausalModel):
         model = SModel(name='slearner', params=self.params, hp=hp)
         optimizer = Adam(learning_rate=self.params['lr'])
         model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
-
         return model
 
     def fit(self, hp, model, *args, **kwargs):
@@ -50,7 +52,6 @@ class SLearner(CausalModel):
     This class can be used to train and create stacked model
     for IHDP dataset setting "b"
     """
-
     def __init__(self, params):
         super().__init__(params)
         self.params = params
@@ -60,65 +61,94 @@ class SLearner(CausalModel):
 
     def fit_tuner(self, x, y, t, seed):
         setSeed(seed)
-        directory_name = 'params_' + self.params['tuner_name'] + '/' + self.params['dataset_name']
+        t = tf.cast(t, dtype=tf.float32)
+        x_t = tf.concat([x, t], axis=1)
 
-        # if self.dataset_name == 'acic':
-        #     directory_name = directory_name + f'/{self.params["model_name"]}'
-        #     project_name = str(self.folder_ind)
-        # else:
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("y shape:", y.shape)
+        print("t shape:", t.shape)
+
+        directory_name = 'params_' + self.params['tuner_name'] + '/' + self.params['dataset_name']
         project_name = self.params["model_name"]
 
         self.directory_name = directory_name
         self.project_name = project_name
-
-        # if exists(directory_name + '/' + project_name) and count == 0:
-        #     shutil.rmtree(directory_name + '/' + project_name)
 
         hp = kt.HyperParameters()
         hypermodel = HyperSLearner(params=self.params)
         objective = kt.Objective("val_mse", direction="min")
         tuner = self.define_tuner(hypermodel, hp, objective, directory_name, project_name)
 
-        x_t = tf.concat([x, t], axis=1)
+        # Check for valid trials
+        tuner_dir = os.path.join(directory_name, project_name)
+        if os.path.exists(tuner_dir) and any(os.listdir(tuner_dir)):
+            trials = tuner.oracle.get_best_trials(num_trials=1)
+            if trials:
+                print("Loading existing trials from", tuner_dir, f"({len(tuner.oracle.trials)} trials found)")
+                return
+            else:
+                print("Directory exists but no valid trials found in", tuner_dir)
 
-        stop_early = [TerminateOnNaN(), EarlyStopping(monitor='val_mse', patience=5)]
-        tuner.search(x_t, y, epochs=50, validation_split=0.2, callbacks=[stop_early], verbose=self.params['verbose'])
 
-        best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-        if self.params['defaults']:
-            best_hps.values = {'n_fc': self.params['n_fc'],
-                               'hidden_phi': self.params['hidden_phi']}
-        self.best_hps = best_hps
+        tuner.search(x_t, y, epochs=50, validation_split=0.2, callbacks=callbacks('val_mse'), verbose=self.params['verbose'])
 
-        return
 
     def fit_model(self, x, y, t, count, seed):
         setSeed(seed)
-
+        t = tf.cast(t, dtype=tf.float32)
         x_t = tf.concat([x, t], axis=1)
-        setSeed(seed)
 
-        tuner = kt.RandomSearch(
+        # Validate inputs
+        print("x shape:", x.shape)
+        print("y shape:", y.shape)
+        print("t shape:", t.shape)
+
+        tuner = self.params['tuner'](
             HyperSLearner(params=self.params),
             directory=self.directory_name,
             project_name=self.project_name,
-            seed=0)
+            overwrite=False,
+            seed=0
+        )
 
-        best_hps = self.best_hps
+        best_hps_list = tuner.get_best_hyperparameters(num_trials=1)
+        if not best_hps_list:
+            print("No best hyperparameters found, using defaults")
+            best_hps = kt.HyperParameters()
+            best_hps.values = {
+                'n_fc': self.params.get('n_fc', 2),
+                'hidden_phi': self.params.get('hidden_phi', 16)
+            }
+        else:
+            best_hps = best_hps_list[0]
+            print("Loaded best hyperparameters:", best_hps.values)
+           # Update self.best_hps
+
+        self.best_hps = best_hps
+
+        if self.params['defaults']:
+            best_hps.values = {
+                'n_fc': self.params['n_fc'],
+                'hidden_phi': self.params['hidden_phi']
+            }
+        else:
+            self.params['n_fc'] = best_hps.get('n_fc')
+            self.params['hidden_phi'] = best_hps.get('hidden_phi')
 
         model = tuner.hypermodel.build(best_hps)
-        stop_early = [
-            ReduceLROnPlateau(monitor='mse', factor=0.5, patience=5, verbose=0, mode='auto',
-                              min_delta=0., cooldown=0, min_lr=1e-8),
-            EarlyStopping(monitor='mse', patience=40, restore_best_weights=True)]
 
-        model.fit(x_t, y, epochs=self.params['epochs'], callbacks=stop_early,
+
+        model.fit(x_t, y, epochs=self.params['epochs'], callbacks=callbacks('mse'),
                   batch_size=self.params['batch_size'], validation_split=0.0,
                   verbose=self.params['verbose'])
+
+        self.sparams = f"""n_fc={best_hps.get('n_fc')} - hidden_phi = {best_hps.get('hidden_phi')}"""
         if count == 0 and self.folder_ind == 0:
-            self.sparams = f"""n_fc={best_hps.get('n_fc')} - hidden_phi = {best_hps.get('hidden_phi')}"""
-            print(f"""The hyperparameter search is complete. the optimal hyperparameters are
-                  layer is {self.sparams}""")
+            print(f"""The hyperparameter search is complete. The optimal hyperparameters are
+                  {self.sparams}""")
+            print(model.summary())
+
         return model
 
     @staticmethod
@@ -132,29 +162,19 @@ class SLearner(CausalModel):
 
     def train_and_evaluate(self, metric_list_train, metric_list_test, average_metric_list_train,
                            average_metric_list_test, **kwargs):
-        # kwargs['count'] = 87
         data_train, data_test = self.load_data(**kwargs)
         count = kwargs.get('count')
         self.folder_ind = kwargs.get('folder_ind') - 1
 
         if self.params['binary']:
-            # fit tuner on the first dataset
-
             self.fit_tuner(data_train['x'], data_train['y'], data_train['t'], seed=0)
             model = self.fit_model(data_train['x'], data_train['y'], data_train['t'], count, seed=0)
-
         else:
-            # fit tuner on the first dataset
-
             self.fit_tuner(data_train['x'], data_train['ys'], data_train['t'], seed=0)
             model = self.fit_model(data_train['x'], data_train['ys'], data_train['t'], count, seed=0)
 
-
-        # make a prediction
-
         concat_pred_test = self.evaluate(data_test['x'], model)
         concat_pred_train = self.evaluate(data_train['x'], model)
-
 
         y0_pred_test, y1_pred_test = concat_pred_test[:, 0], concat_pred_test[:, 1]
         y0_pred_test = tf.expand_dims(y0_pred_test, axis=1)
@@ -185,13 +205,10 @@ class SLearner(CausalModel):
                       pehe_train)
             else:
                 print(kwargs.get('count'), 'Pehe Test = ', pehe_test, ' Pehe Train = ', pehe_train, ' ATE test = ',
-                      ate_test,
-                      ' ATE train = ', ate_train)
+                      ate_test, ' ATE train = ', ate_train)
 
             metric_list_test.append(pehe_test)
             metric_list_train.append(pehe_train)
 
             average_metric_list_test.append(ate_test)
             average_metric_list_train.append(ate_train)
-
-
