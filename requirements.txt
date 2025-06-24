@@ -54,13 +54,13 @@ scipy==1.11.4
 semopy==2.3.11
 statsmodels==0.14.4
 sympy==1.14.0
-tensorboard==2.19.0
+tensorboard==2.18.0
 tensorboard-data-server==0.7.2
-tensorflow==2.19.0
+tensorflow==2.18.0
 tensorflow-io-gcs-filesystem==0.37.1
 tensorflow-probability==0.25.0
 termcolor==3.1.0
-tf_keras==2.19.0
+tf_keras==2.18.0
 threadpoolctl==3.6.0
 tzdata==2025.2
 urllib3==2.5.0
